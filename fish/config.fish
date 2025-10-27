@@ -39,8 +39,4 @@ if status is-interactive
     end
 end
 
-# bun ships zsh completions in ~/.bun/_bun; skip sourcing here to avoid syntax errors.
-# Generate fish completions instead:
-#   bun completions --shell fish > ~/.config/fish/completions/bun.fish
-
-# prompt/theme handled via tide/starship/etc.
+set -x TERM xterm-256color
