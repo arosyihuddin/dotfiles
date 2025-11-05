@@ -8,6 +8,9 @@ else if test -f $HOME/.local/bin/env
     source $HOME/.local/bin/env
 end
 
+# cargo
+set -gx PATH $HOME/.cargo/bin $PATH
+
 # bun
 set -gx BUN_INSTALL $HOME/.bun
 set -l bun_bin $BUN_INSTALL/bin
