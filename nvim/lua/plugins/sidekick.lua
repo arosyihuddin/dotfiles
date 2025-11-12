@@ -1,7 +1,8 @@
 return {
   "folke/sidekick.nvim",
+  -- Minimal init without autocommands that might conflict
   init = function()
-    -- Enable proper scrolling in terminal buffers
+    -- Basic terminal settings only
     vim.api.nvim_create_autocmd("TermOpen", {
       pattern = "*",
       callback = function()
@@ -17,9 +18,9 @@ return {
         droid = {
           cmd = { "droid" },
         },
-        -- Aider - Full autonomous coding agent
-        aider = {
-          cmd = { "aider" },
+        -- RovoDev - AI development assistant
+        rovodev = {
+          cmd = { "acli", "rovodev", "run" },
         },
         -- Codex - Code search and generation
         codex = {
@@ -72,15 +73,98 @@ return {
       function()
         require("sidekick.cli").toggle({ focus = true })
       end,
-      desc = "Agent Menu",
+      desc = "Agent Menu (All Tools)",
+      mode = { "n", "v" },
+    },
+    {
+      "<leader>aA",
+      function()
+        -- Close current session first, then open agent menu
+        require("sidekick.cli").close()
+        vim.defer_fn(function()
+          require("sidekick.cli").toggle({ focus = true })
+        end, 100)
+      end,
+      desc = "New Agent Menu (Force Close & Open)",
       mode = { "n", "v" },
     },
     {
       "<leader>aq",
       function()
-        require("sidekick.cli").close()
+        pcall(function()
+          require("sidekick.cli").close()
+        end)
+        -- Force close terminal buffer after short delay
+        vim.defer_fn(function()
+          pcall(function()
+            if vim.bo.buftype == "terminal" then
+              local job_id = vim.b.terminal_job_id
+              if job_id then
+                vim.fn.jobstop(job_id)
+              end
+              vim.cmd("bdelete!")
+            end
+          end)
+        end, 200)
       end,
       desc = "Quit/Close Agent",
+      mode = { "n", "t" },
+    },
+    {
+      "<leader>aQ",
+      function()
+        -- Store current buffer info
+        local current_buf = vim.api.nvim_get_current_buf()
+        local job_id = vim.b.terminal_job_id
+        
+        -- Force close session
+        pcall(function()
+          require("sidekick.cli").close()
+        end)
+        
+        -- Kill terminal job and delete buffer
+        vim.defer_fn(function()
+          pcall(function()
+            -- Kill the terminal job first
+            if job_id then
+              vim.fn.jobstop(job_id)
+            end
+            -- Find and switch to a safe buffer
+            for _, buf in ipairs(vim.api.nvim_list_bufs()) do
+              if vim.api.nvim_buf_is_valid(buf) and vim.bo[buf].buftype == "" then
+                vim.api.nvim_set_current_buf(buf)
+                break
+              end
+            end
+            -- Force delete the terminal buffer
+            if vim.api.nvim_buf_is_valid(current_buf) then
+              vim.api.nvim_buf_delete(current_buf, { force = true })
+            end
+          end)
+        end, 100)
+      end,
+      desc = "Force Kill Agent Session",
+      mode = { "n", "t" },
+    },
+    {
+      "<leader>aqq",
+      function()
+        -- Force kill all terminal processes and close buffers
+        for _, buf in ipairs(vim.api.nvim_list_bufs()) do
+          if vim.api.nvim_buf_is_valid(buf) and vim.bo[buf].buftype == "terminal" then
+            local job_id = vim.api.nvim_buf_get_var(buf, "terminal_job_id")
+            if job_id then
+              pcall(function() vim.fn.jobstop(job_id) end)
+            end
+            pcall(function() vim.api.nvim_buf_delete(buf, { force = true }) end)
+          end
+        end
+        pcall(function()
+          require("sidekick.cli").close()
+        end)
+        vim.notify("All agent sessions killed", vim.log.levels.INFO)
+      end,
+      desc = "Kill All Agent Sessions",
       mode = { "n", "t" },
     },
     {
@@ -122,7 +206,6 @@ return {
       desc = "Claude Agent",
       mode = { "n", "v" },
     },
-
     {
       "<leader>ad",
       function()
@@ -154,6 +237,23 @@ return {
         require("sidekick.cli").toggle({ name = "gemini", focus = true })
       end,
       desc = "Gemini Agent",
+      mode = { "n", "v" },
+    },
+    {
+      "<leader>ar",
+      function()
+        require("sidekick.cli").toggle({ name = "rovodev", focus = true })
+      end,
+      desc = "RovoDev Agent",
+      mode = { "n", "v" },
+    },
+    {
+      "<leader>an",
+      function()
+        -- Open agent menu for new session (shows all available tools)
+        require("sidekick.cli").toggle({ focus = true })
+      end,
+      desc = "New Agent Session (Show All)",
       mode = { "n", "v" },
     },
   },
